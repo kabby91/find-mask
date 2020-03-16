@@ -28,7 +28,7 @@ export default {
         }
     },
     mounted() {
-        //this.drawMap(this.findMask);
+        this.drawMap(this.findMask);
     
     },
     methods: {
@@ -102,7 +102,7 @@ export default {
             }            
         },
         searchMask(){
-            alert(this.addr);
+
             axios.get(`https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/storesByAddr/json?address=${this.addr}`).then(res => {
                     this.findMask = res.data;
                     this.drawMap(this.findMask)

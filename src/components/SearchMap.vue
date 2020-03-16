@@ -12,7 +12,7 @@
 </template>
 
 <script>
-import { FIND_MASK } from '../eventBus';
+import axios from 'axios';
 
 export default { 
 
@@ -20,31 +20,20 @@ export default {
     data() {
        return {
             addr: '',
-             findMask: {
-                 address: '',
-                 count:'',
-                 stores: []
-             },
-             text:'현재 위치'
-             
+            findMask: {
+                address: '',
+                count:'',
+                stores: []
+             },      
         }
-    }, 
-    created(){
-        this.getLocation();
-                
     },
     mounted() {
-
-            FIND_MASK.$on('현재 위치', (findMask) => {
-                this.findMask=findMask;
-                this.drawMap(this.findMask, '현재 위치');
-            });
+        //this.drawMap(this.findMask);
+    
     },
-
     methods: {
 
-        drawMap(findMask, text){
-            
+        drawMap(findMask){            
  
             if(findMask.stores.length!=0){
 
@@ -74,16 +63,10 @@ export default {
 
                 for(let i=0; i<len; i++){
                     //HTML 문자열 또는 Dom Element 입니다 
-                    let content = '<div class="label">';
-                    content += '<ul>';
-                    content += '    <li>';
-                    content += '        <span class="label">약국 : </span><span class="name">' + findMask.stores[i].name+'</span>';
-                    content += '    </li>';
-                    content += '    <li>';
-                    content += '        <span class="label">수량 : </span><span class="number">' + findMask.stores[i].remain_stat+'</span>';
-                    content += '    </li>';
-                    content += '</ul>'
-                    content += '</div>';
+                    let state = this.getRemainStat(findMask.stores[i].remain_stat);
+                    let content = '<div class="find-mask-here">';
+                        content += '        </span><span class="number">' + state+'</span>';
+                        content += '</div>';
                     let contentPosition  = new kakao.maps.LatLng(findMask.stores[i].lat, findMask.stores[i].lng); 
                     // 마커를 생성합니다
                     let marker = new kakao.maps.CustomOverlay({
@@ -96,35 +79,67 @@ export default {
 
                 } 
 
-            }else {
+            }else {     
+              
+                let mapContainer = document.getElementById('map');// 지도를 표시할 div 
+                let mapOption = { 
+                        center: new kakao.maps.LatLng(37.3003072, 127.1072867), // 지도의 중심좌표
+                        level: 5 // 지도의 확대 레벨
+                    };
 
+                // 지도를 표시할 div와  지도 옵션으로  지도를 생성합니다
+                let map = new kakao.maps.Map(mapContainer, mapOption); 
+                    
+                let contentPosition  = new kakao.maps.LatLng(37.3003072, 127.1072867); 
+                    // 마커를 생성합니다
+                    let marker = new kakao.maps.CustomOverlay({
+                        position: contentPosition
+                    });
+                    // 마커가 지도 위에 표시되도록 설정합니다
+                marker.setMap(null);
+                
 
             }            
         },
-        getLocation() {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(this.onSuccessGeolocation, this.onErrorGeolocation);
-                } else {
-                    alert("error");
-                }
-            },
-        onSuccessGeolocation(position) {
-            console.log(position);
-            //this.getMaskInfo(position); 
-           
-        },
-        onErrorGeolocation(){
-            var mapContainer = document.getElementById('map'); // 지도를 표시할 div 
-            
-            var mapOption = { 
+        searchMask(){
+            alert(this.addr);
+            axios.get(`https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/storesByAddr/json?address=${this.addr}`).then(res => {
+                    this.findMask = res.data;
+                    this.drawMap(this.findMask)
 
-                center: new kakao.maps.LatLng(33.450701, 126.570667), // 지도의 중심좌표
-                level: 5 // 지도의 확대 레벨
-            };
-
-            // 지도를 표시할 div와  지도 옵션으로  지도를 생성합니다
-            var map = new kakao.maps.Map(mapContainer, mapOption); 
+                 }).catch(err => {
+                     console.log(err);
+            });            
         },
+        getRemainStat(remain_stat){
+            let status = '';
+            /*
+             * 재고 상태[100개 이상(녹색): 'plenty' / 
+             * 30개 이상 100개미만(노랑색): 'some' / 
+             * 2개 이상 30개 미만(빨강색): 'few' / 
+             * 1개 이하(회색): 'empty' / 
+             * 판매중지: 'break'
+            */
+           switch(remain_stat){
+               case 'plenty':
+                   status = '100개 이상';
+                   break;
+               case 'some':
+                   status = '30개 이상 100개미만';
+                   break;
+               case 'few':
+                   status = '1개 이상 30개 미만';
+                   break;
+               case 'empty':
+                   status = '없음';
+                   break;
+               case 'break':
+                   status = '판매중지';
+                   break;
+           }
+
+            return status;
+        }
 
 
 
@@ -135,14 +150,24 @@ export default {
 <style>
 #map {
     width:100%;
-    height:750px;
+    height:700px;
 }
 
-.label {
+.find-mask-here {
     background-color: azure;
+    border: 2px solid #73AD21;
+    border-radius: 5px;
+
 }
-.label li {
+.find-mask-here li {
     text-align: left;
 }
+.find-mask-here {
+    z-index:555555 !important;
+}
 
+.find-mask-here .number {
+    font-size: 15px;
+    font-family: NotoSansCJKkr-Thin;
+}
 </style>
